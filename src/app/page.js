@@ -27,7 +27,7 @@ export default function Home() {
     setUploading(true);
     
     try {
-      const response = await axios.post('/api/upload', formData);
+      const response = await axios.post('/api/v1/upload', formData);
       setUploadResult(response.data);
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -45,7 +45,7 @@ export default function Home() {
     setSearching(true);
     
     try {
-      const response = await axios.post('/api/search', { query });
+      const response = await axios.post('/api/v1/search', { query });
       setSearchResult(response.data);
     } catch (error) {
       console.error('Error searching:', error);

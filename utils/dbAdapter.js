@@ -12,6 +12,6 @@ const connection = {
   password: process.env.DB_PASSWORD
 };
 
-const db = pgp(connection);
+const dbAdapter = pgp(connection);
 
 export default dbAdapter;

@@ -1,4 +1,4 @@
-// /api/vi/route.js
+// /api/vi/upload/route.js
 
 import multer from 'multer';
 import { processFile } from '../../../../../utils/documentProcessor';
@@ -14,7 +14,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const uploadMiddleware = upload.single('file');
 
-export default async function handler(req, res) {
+export default async function POST(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }

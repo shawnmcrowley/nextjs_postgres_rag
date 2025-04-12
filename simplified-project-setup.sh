@@ -48,7 +48,9 @@ $$;
 EOF
 
 # Create docker-compose.yml
-cat > rag-app/docker-compose.yml << 'EOF'
+cat > rag-app/docker-compose.yml 
+
+<< 'EOF'
 
 services:
   postgres:

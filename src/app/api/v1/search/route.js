@@ -1,7 +1,7 @@
 // /api/v1/search.js
 
 import dbAdapter from '../../../../../utils/dbAdapter';
-import { generateEmbedding } from '../../lib/documentProcessors';
+import { generateEmbedding } from '../../../../../utils/documentProcessor';
 import { OpenAI } from 'openai';
 
 const openai = new OpenAI({

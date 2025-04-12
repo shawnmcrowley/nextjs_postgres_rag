@@ -1,7 +1,7 @@
 // /util/documentProcessors.js
 import mammoth from 'mammoth';
-import XLSX from 'xlsx';
-import pdf from 'pdf-parse';
+import * as XLSX from 'xlsx';
+import pdfParse from 'pdf-parse/lib/pdf-parse.js'; // Import directly from the lib folder
 import { OpenAI } from 'openai';
 
 const openai = new OpenAI({
@@ -15,6 +15,7 @@ export async function processDocFile(buffer) {
 }
 
 // Process .xls and .xlsx files
+// Process .xls and .xlsx files
 export async function processExcelFile(buffer) {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   let result = '';
@@ -22,7 +23,8 @@ export async function processExcelFile(buffer) {
   // Iterate through each sheet
   workbook.SheetNames.forEach(sheetName => {
     const worksheet = workbook.Sheets[sheetName];
-    const sheetText = XLSX.utils.sheet_to_txt(worksheet);
+    // Convert the sheet to CSV format
+    const sheetText = XLSX.utils.sheet_to_csv(worksheet);
     result += `Sheet: ${sheetName}\n${sheetText}\n\n`;
   });
   
@@ -31,10 +33,14 @@ export async function processExcelFile(buffer) {
 
 // Process .pdf files
 export async function processPdfFile(buffer) {
-  const data = await pdf(buffer);
-  return data.text;
+  try {
+    const data = await pdfParse(buffer);
+    return data.text;
+  } catch (error) {
+    console.error("Error parsing PDF:", error);
+    return "Error extracting text from PDF file.";
+  }
 }
-
 // Process .ppt and .pptx files (simplified - in reality you'd need a better PPT parser)
 export async function processPptFile(buffer) {
   // This is a placeholder. For production, use a proper PPT parsing library
