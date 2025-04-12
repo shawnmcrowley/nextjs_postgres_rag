@@ -49,7 +49,6 @@ EOF
 
 # Create docker-compose.yml
 cat > rag-app/docker-compose.yml << 'EOF'
-version: '3.8'
 
 services:
   postgres:

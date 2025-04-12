@@ -16,10 +16,14 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Project Setup
 
 ### Project structure
+
 mkdir -p rag-app/postgres/init
 
-#### Create initialization script for PostgreSQL
-cat > rag-app/postgres/init/01-init.sql << 'EOF'
+### Create initialization script for PostgreSQL
+
+cat > rag-app/postgres/init/01-init.sql
+
+ << 'EOF'
 -- Enable the pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -64,9 +68,11 @@ END;
 $$;
 EOF
 
-##### Create docker-compose.yml
-cat > rag-app/docker-compose.yml << 'EOF'
-version: '3.8'
+### Create docker-compose.yml
+
+cat > rag-app/docker-compose.yml
+
+<< 'EOF'
 
 services:
   postgres:
@@ -103,12 +109,14 @@ volumes:
   postgres_data:
 EOF
 
-# Create NextJS application
+### Create NextJS application
+
 cd rag-app
 npx create-next-app@latest frontend --typescript --tailwind --eslint
 cd frontend
 
-# Install dependencies
+### Install dependencies
+
 npm install pg pg-promise openai langchain @langchain/openai mammoth xlsx pdf-parse multer axios dotenv
 
 
@@ -119,10 +127,5 @@ To learn more about Next.js, take a look at the following resources:
 - [Setting up Postgres & Pgadmin with Docker](https://medium.com/@marvinjungre/get-postgresql-and-pgadmin-4-up-and-running-with-docker-4a8d81048aea) - Configuration Instructions.
 - [Setting up Postgres with pvector in Docker](https://medium.com/@adarsh.ajay/setting-up-postgresql-with-pgvector-in-docker-a-step-by-step-guide-d4203f6456bd) - With pvector.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Check out Vercel [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
