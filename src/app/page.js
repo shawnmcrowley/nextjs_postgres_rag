@@ -1,3 +1,4 @@
+"use client"
 // pages/index.js
 import { useState } from 'react';
 import Head from 'next/head';
