@@ -8,15 +8,15 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export default async function handler(req, res) {
+export async function POST(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    return Response.json({ message: 'Method not allowed' }, {status:405});
   }
 
   try {
     const { query } = req.body;
     if (!query) {
-      return res.status(400).json({ error: 'Query is required' });
+      return Response.json({ error: 'Query is required' }, {status:400});
     }
 
     // Generate embedding for the query
@@ -54,17 +54,17 @@ export default async function handler(req, res) {
       ],
     });
 
-    res.status(200).json({
+    Response.json({
       answer: completion.choices[0].message.content,
       sources: results.map(doc => ({
         id: doc.id,
         filename: doc.filename,
         similarity: doc.similarity,
         metadata: doc.metadata
-      }))
+      },{status:200}))
     });
   } catch (error) {
     console.error('Error searching:', error);
-    res.status(500).json({ error: error.message });
+    Response.json({ error: error.message }, {status:500});
   }
 }

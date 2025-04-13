@@ -14,21 +14,21 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const uploadMiddleware = upload.single('file');
 
-export default async function POST(req, res) {
+export async function POST(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    return Response.json({ message: 'Method not allowed' }, {status:405});
   }
 
   return new Promise((resolve, reject) => {
     uploadMiddleware(req, res, async (err) => {
       if (err) {
-        return reject(res.status(500).json({ error: err.message }));
+        return reject(Response.json({ error: err.message }, {status:500}));
       }
 
       try {
         const file = req.file;
         if (!file) {
-          return res.status(400).json({ error: 'No file uploaded' });
+          return Response.json({ error: 'No file uploaded' }, {status:400});
         }
 
         const processedFile = await processFile(file);
@@ -44,14 +44,14 @@ export default async function POST(req, res) {
           ]
         );
 
-        res.status(200).json({ 
+        Response.json({ 
           message: 'File processed and stored successfully',
           filename: processedFile.filename
-        });
+        }, {status:200});
         return resolve();
       } catch (error) {
         console.error('Error processing file:', error);
-        res.status(500).json({ error: error.message });
+        Response.json({ error: error.message }, {status:500});
         return resolve();
       }
     });
