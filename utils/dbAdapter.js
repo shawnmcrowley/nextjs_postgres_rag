@@ -1,17 +1,30 @@
-// /util/dbAdapter.js
-
+// utils/dbAdapter.js
 import pgPromise from 'pg-promise';
 
-const pgp = pgPromise({});
+// Global singleton instance
+let dbAdapter = null;
 
-const connection = {
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD
-};
+export function getDB() {
+  if (dbAdapter !== null) {
+    return dbAdapter;
+  }
+  
+  const pgp = pgPromise({});
+  
+  const connection = {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || 'rag_db',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    max: 30, // max number of connections in the pool
+    idleTimeoutMillis: 30000, // how long a connection can be idle before being closed
+    connectionTimeoutMillis: 2000 // how long to wait for a connection
+  };
+  
+  dbAdapter = pgp(connection);
+  return dbAdapter;
+}
 
-const dbAdapter = pgp(connection);
-
-export default dbAdapter;
+// For backwards compatibility
+export default getDB();

@@ -2,7 +2,7 @@
 
 import multer from 'multer';
 import { processFile } from '../../../../../utils/documentProcessor';
-import dbAdapter from '../../../../../utils/dbAdapter';
+import getDB from '../../../../../utils/dbAdapter';
 
 export const config = {
   api: {
@@ -34,7 +34,7 @@ export async function POST(req, res) {
         const processedFile = await processFile(file);
 
         // Save to database
-        await dbAdapter.none(
+        await getDB.none(
           'INSERT INTO documents(filename, content, metadata, embedding) VALUES($1, $2, $3, $4)',
           [
             processedFile.filename,

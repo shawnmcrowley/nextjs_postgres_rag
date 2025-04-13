@@ -119,6 +119,7 @@ cd frontend
 
 npm install pg pg-promise openai langchain @langchain/openai mammoth xlsx pdf-parse multer axios dotenv
 
+Hide secrets in .env.local.  For DB_HOST supply the Docker assigned IP Address instead of localhost
 
 To learn more about Next.js, take a look at the following resources:
 
@@ -128,4 +129,4 @@ To learn more about Next.js, take a look at the following resources:
 - [Setting up Postgres with pvector in Docker](https://medium.com/@adarsh.ajay/setting-up-postgresql-with-pgvector-in-docker-a-step-by-step-guide-d4203f6456bd) - With pvector.
 
 
-Check out Vercel [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Check out Nextjs [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

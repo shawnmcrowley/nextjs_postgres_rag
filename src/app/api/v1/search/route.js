@@ -1,6 +1,6 @@
 // /api/v1/search.js
 
-import dbAdapter from '../../../../../utils/dbAdapter';
+import getDB from '../../../../../utils/dbAdapter';
 import { generateEmbedding } from '../../../../../utils/documentProcessor';
 import { OpenAI } from 'openai';
 
@@ -23,7 +23,7 @@ export async function POST(req, res) {
     const queryEmbedding = await generateEmbedding(query);
 
     // Find similar documents
-    const results = await dbAdapter.query(
+    const results = await getDB.query(
       `SELECT id, filename, content, metadata, 
        1 - (embedding <=> $1) AS similarity
        FROM documents
