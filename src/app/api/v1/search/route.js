@@ -1,36 +1,37 @@
 // /api/v1/search.js
 
-import getDB from '../../../../../utils/dbAdapter';
+
 import { generateEmbedding } from '../../../../../utils/documentProcessor';
+import { any } from '../../../../../utils/dbAdapter';
 import { OpenAI } from 'openai';
+import { NextResponse } from 'next/server';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function POST(req, res) {
-  if (req.method !== 'POST') {
-    return Response.json({ message: 'Method not allowed' }, {status:405});
-  }
-
+export async function POST(request) {
   try {
-    const { query } = req.body;
+    const data = await request.json();
+    const { query } = data;
+    
     if (!query) {
-      return Response.json({ error: 'Query is required' }, {status:400});
+      return NextResponse.json(
+        { error: 'Query is required' },
+        { status: 400 }
+      );
     }
 
     // Generate embedding for the query
     const queryEmbedding = await generateEmbedding(query);
+    const formattedEmbedding = `[${queryEmbedding.join(',')}]`;
 
-    // Find similar documents
-    const results = await getDB.query(
-      `SELECT id, filename, content, metadata, 
-       1 - (embedding <=> $1) AS similarity
-       FROM documents
-       ORDER BY similarity DESC
-       LIMIT 5`,
-      [queryEmbedding]
+    // Find similar documents using our PostgreSQL function with the any helper function
+    const results = await any(
+      'SELECT * FROM semantic_search($1::vector(1536), 0.7, 5)',
+      [formattedEmbedding]
     );
+  
 
     // Use OpenAI to generate a response based on the retrieved documents
     let contextText = results.map(doc => doc.content).join('\n\n');
@@ -54,17 +55,20 @@ export async function POST(req, res) {
       ],
     });
 
-    Response.json({
+    return NextResponse.json({
       answer: completion.choices[0].message.content,
       sources: results.map(doc => ({
         id: doc.id,
         filename: doc.filename,
         similarity: doc.similarity,
         metadata: doc.metadata
-      },{status:200}))
+      }))
     });
   } catch (error) {
     console.error('Error searching:', error);
-    Response.json({ error: error.message }, {status:500});
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 }
