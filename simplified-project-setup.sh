@@ -93,4 +93,4 @@ npx create-next-app@latest frontend --typescript --tailwind --eslint
 cd frontend
 
 # Install dependencies
-npm install pg pg-promise openai langchain @langchain/openai mammoth xlsx pdf-parse multer axios dotenv
+npm install pg pg-promise openai langchain @langchain/openai mammoth xlsx pdf-parse axios

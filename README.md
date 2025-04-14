@@ -117,7 +117,7 @@ cd frontend
 
 ### Install dependencies
 
-npm install pg pg-promise openai langchain @langchain/openai mammoth xlsx pdf-parse multer axios dotenv
+npm install pg pg-promise openai langchain @langchain/openai mammoth xlsx pdf-parse axios
 
 Hide secrets in .env.local.  For DB_HOST supply the Docker assigned IP Address instead of localhost
 
