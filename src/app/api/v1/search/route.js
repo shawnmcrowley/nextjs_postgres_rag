@@ -26,9 +26,15 @@ export async function POST(request) {
     const queryEmbedding = await generateEmbedding(query);
     const formattedEmbedding = `[${queryEmbedding.join(',')}]`;
 
+    // Adding Debugging for validate column dimensions of vector
+
+    //console.log('Query Embedding:', queryEmbedding);
+
     // Find similar documents using our PostgreSQL function with the any helper function
+    // Adjust the Threshold and Limit as per your requirement - lowering from 0.7 to 0.3 to returm more/not better results
+
     const results = await any(
-      'SELECT * FROM semantic_search($1::vector(1536), 0.7, 5)',
+      'SELECT * FROM semantic_search($1::vector(1536), 0.3, 5)',
       [formattedEmbedding]
     );
   
