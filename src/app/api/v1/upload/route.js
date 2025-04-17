@@ -1,46 +1,94 @@
 // src/app/api/v1/upload/route.js
 import { processFile } from '../../../../../utils/documentProcessor';
-import { none } from '../../../../../utils/dbAdapter';
+import { saveDocument } from '../../../../../utils/dbAdapter';
 import { NextResponse } from 'next/server';
+
+// Configure the maximum request body size
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '30mb'
+    }
+  }
+};
 
 export async function POST(request) {
   try {
+    console.log('Starting file upload process');
+    
     // Get the formData from the request
     const formData = await request.formData();
-    const file = formData.get('file');
+    const files = formData.getAll('files');
     
-    if (!file) {
+    if (!files || files.length === 0) {
+      console.error('No files found in request');
       return NextResponse.json(
-        { error: 'No file uploaded' },
+        { error: 'No files uploaded' },
         { status: 400 }
       );
     }
 
-    // Process file and generate embeddings
-    const processedFile = await processFile({
-      originalname: file.name,
-      mimetype: file.type,
-      size: file.size,
-      buffer: await file.arrayBuffer()
-    });
+    console.log(`Processing ${files.length} files`);
+    const results = [];
+    const errors = [];
 
-    // Save to database using the none helper function
-    await none(
-      'INSERT INTO documents(filename, content, metadata, embedding) VALUES($1, $2, $3, $4)',
-      [
-        processedFile.filename,
-        processedFile.content,
-        processedFile.metadata,
-        processedFile.embedding
-      ]
-    );
+    // Process each file
+    for (const file of files) {
+      try {
+        console.log(`Processing file: ${file.name} (${file.size} bytes)`);
+        
+        // Process file and generate embeddings
+        const processedFile = await processFile({
+          originalname: file.name,
+          mimetype: file.type,
+          size: file.size,
+          buffer: Buffer.from(await file.arrayBuffer())
+        });
 
+        console.log(`File processed successfully: ${processedFile.filename}`);
+        console.log(`Generated embeddings: ${processedFile.embedding.length} dimensions`);
+        if (processedFile.chunks) {
+          console.log(`Generated ${processedFile.chunks.length} chunks`);
+        }
+
+        console.log(`Saving file to database: ${processedFile.filename}`);
+        // Save to database using the new saveDocument function
+        const documentId = await saveDocument(processedFile);
+        
+        if (documentId) {
+          results.push({
+            filename: processedFile.filename,
+            documentId: documentId
+          });
+          console.log(`File saved successfully: ${processedFile.filename} (ID: ${documentId})`);
+        } else {
+          throw new Error('Failed to save document to database');
+        }
+      } catch (error) {
+        console.error(`Error processing file ${file.name}:`, error);
+        errors.push({
+          filename: file.name,
+          error: error.message
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      console.log('Some files failed to process:', errors);
+      return NextResponse.json({
+        message: 'Some files were processed successfully, but others failed',
+        results: results,
+        errors: errors
+      }, { status: 207 }); // 207 Multi-Status
+    }
+
+    console.log('All files processed successfully');
     return NextResponse.json({
-      message: 'File processed and stored successfully',
-      filename: processedFile.filename
+      message: 'All files processed and stored successfully',
+      results: results
     });
   } catch (error) {
-    console.error('Error processing file:', error);
+    console.error('Error in upload route:', error);
     return NextResponse.json(
       { error: error.message },
       { status: 500 }

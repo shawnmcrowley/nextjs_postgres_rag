@@ -1,19 +1,11 @@
 // /api/v1/search.js
 
-
-import { generateEmbedding } from '../../../../../utils/documentProcessor';
-import { any } from '../../../../../utils/dbAdapter';
-import { OpenAI } from 'openai';
 import { NextResponse } from 'next/server';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { searchDocuments } from '../../../../../utils/dbAdapter';
 
 export async function POST(request) {
   try {
-    const data = await request.json();
-    const { query } = data;
+    const { query } = await request.json();
     
     if (!query) {
       return NextResponse.json(
@@ -22,58 +14,36 @@ export async function POST(request) {
       );
     }
 
-    // Generate embedding for the query
-    const queryEmbedding = await generateEmbedding(query);
-    const formattedEmbedding = `[${queryEmbedding.join(',')}]`;
+    console.log('Searching for query:', query);
+    const results = await searchDocuments(query);
+    console.log('Raw search results from dbAdapter:', JSON.stringify(results, null, 2));
 
-    // Adding Debugging for validate column dimensions of vector
+    // Ensure results is an array and process each result
+    const formattedResults = (Array.isArray(results) ? results : []).map(result => {
+      console.log('Processing result in route:', {
+        id: result.id,
+        filename: result.filename,
+        content: typeof result.content,
+        contentValue: result.content,
+        similarity: result.similarity,
+        metadata: result.metadata
+      });
 
-    //console.log('Query Embedding:', queryEmbedding);
-
-    // Find similar documents using our PostgreSQL function with the any helper function
-    // Adjust the Threshold and Limit as per your requirement - lowering from 0.7 to 0.3 to returm more/not better results
-
-    const results = await any(
-      'SELECT * FROM semantic_search($1::vector(1536), 0.3, 5)',
-      [formattedEmbedding]
-    );
-  
-
-    // Use OpenAI to generate a response based on the retrieved documents
-    let contextText = results.map(doc => doc.content).join('\n\n');
-    contextText = contextText.substring(0, 16000); // Limit context to avoid token limits
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant. Answer the question based on the provided context. If the answer cannot be found in the context, say so."
-        },
-        {
-          role: "user",
-          content: `Context information is below.
-          ---------------------
-          ${contextText}
-          ---------------------
-          Given the context information and not prior knowledge, answer the following question: ${query}`
-        }
-      ],
+      return {
+        id: result.id,
+        filename: result.filename,
+        content: String(result.content || ''),
+        similarity: result.similarity,
+        metadata: result.metadata || {}
+      };
     });
 
-    return NextResponse.json({
-      answer: completion.choices[0].message.content,
-      sources: results.map(doc => ({
-        id: doc.id,
-        filename: doc.filename,
-        similarity: doc.similarity,
-        metadata: doc.metadata
-      }))
-    });
+    console.log('Formatted results from route:', JSON.stringify(formattedResults, null, 2));
+    return NextResponse.json(formattedResults);
   } catch (error) {
-    console.error('Error searching:', error);
+    console.error('Search error:', error);
     return NextResponse.json(
-      { error: error.message },
+      { error: error.message || 'Search failed' },
       { status: 500 }
     );
   }

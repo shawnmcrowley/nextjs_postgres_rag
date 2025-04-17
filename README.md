@@ -1,3 +1,81 @@
+# Next.js PostgreSQL RAG System
+
+## Prerequisites
+- Node.js 18+
+- PostgreSQL 14+
+- OpenAI API key
+
+## Database Setup
+
+1. Create a new PostgreSQL database:
+```sql
+CREATE DATABASE rag_db;
+```
+
+2. Connect to the database and run the following SQL commands:
+```sql
+-- Enable the vector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Create the documents table
+CREATE TABLE documents (
+    id SERIAL PRIMARY KEY,
+    filename TEXT NOT NULL,
+    content TEXT NOT NULL,
+    metadata JSONB NOT NULL,
+    embedding vector(1536),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create the document_chunks table
+CREATE TABLE document_chunks (
+    id SERIAL PRIMARY KEY,
+    document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    embedding vector(1536) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for embeddings
+CREATE INDEX idx_documents_embedding 
+ON documents 
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
+
+CREATE INDEX idx_document_chunks_embedding 
+ON document_chunks 
+USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
+```
+
+## Environment Variables
+Create a `.env.local` file in the project root with the following variables:
+```
+OPENAI_API_KEY=your_openai_api_key_here
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=rag_db
+DB_USER=postgres
+DB_PASSWORD=postgres
+```
+
+## Installation
+```bash
+npm install
+```
+
+## Development
+```bash
+npm run dev
+```
+
+## Features
+- Document upload and processing
+- Text extraction from various file formats
+- Vector embeddings generation
+- Semantic search using PostgreSQL vector similarity
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
