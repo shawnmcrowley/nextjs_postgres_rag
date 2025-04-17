@@ -282,7 +282,7 @@ export default function Home() {
           {searchResults.length > 0 && (
             <div className="mt-8">
               <h2 className="text-2xl font-bold mb-4">Search Results</h2>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {searchResults.map((result, index) => {
                   console.log('Rendering result:', {
                     index,
@@ -297,14 +297,33 @@ export default function Home() {
                     .map(paragraph => paragraph.trim())
                     .filter(paragraph => paragraph.length > 0);
 
+                  // Calculate similarity percentage
+                  const similarityPercentage = ((1 - result.similarity) * 100).toFixed(1);
+
                   return (
-                    <div key={index} className="bg-white p-4 rounded-lg shadow">
-                      <h3 className="font-semibold text-lg mb-2">{result.filename}</h3>
-                      <div className="text-sm text-gray-600 mb-2">
-                        Similarity: {(1 - result.similarity).toFixed(4)}
+                    <div key={index} className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:border-blue-200 transition-colors">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-semibold text-lg text-gray-800">{result.filename}</h3>
+                          <div className="flex items-center mt-1">
+                            <span className="text-sm text-gray-600">Relevance: </span>
+                            <div className="ml-2 flex items-center">
+                              <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-blue-500 rounded-full"
+                                  style={{ width: `${similarityPercentage}%` }}
+                                ></div>
+                              </div>
+                              <span className="ml-2 text-sm font-medium text-gray-700">
+                                {similarityPercentage}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
+                      
                       <div className="prose max-w-none">
-                        {formattedContent.map((paragraph, i) => (
+                        {formattedContent.slice(0, 3).map((paragraph, i) => (
                           <div key={i} className="mb-4">
                             {paragraph.split('\n').map((line, j) => (
                               <p key={j} className="text-gray-700 leading-relaxed mb-2">
@@ -313,13 +332,59 @@ export default function Home() {
                             ))}
                           </div>
                         ))}
+                        {formattedContent.length > 3 && (
+                          <button 
+                            className="text-blue-500 hover:text-blue-700 text-sm font-medium mt-2"
+                            onClick={() => {
+                              // Toggle full content view
+                              const element = document.getElementById(`content-${index}`);
+                              if (element) {
+                                element.classList.toggle('hidden');
+                              }
+                            }}
+                          >
+                            Show more
+                          </button>
+                        )}
+                        <div id={`content-${index}`} className="hidden">
+                          {formattedContent.slice(3).map((paragraph, i) => (
+                            <div key={i} className="mb-4">
+                              {paragraph.split('\n').map((line, j) => (
+                                <p key={j} className="text-gray-700 leading-relaxed mb-2">
+                                  {line}
+                                </p>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
                       </div>
+
                       {result.metadata && Object.keys(result.metadata).length > 0 && (
-                        <div className="mt-2 text-sm text-gray-500">
-                          <strong>Metadata:</strong>
-                          <pre className="mt-1 p-2 bg-gray-50 rounded">
-                            {JSON.stringify(result.metadata, null, 2)}
-                          </pre>
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <button 
+                            className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
+                            onClick={() => {
+                              const element = document.getElementById(`metadata-${index}`);
+                              if (element) {
+                                element.classList.toggle('hidden');
+                              }
+                            }}
+                          >
+                            <span>Show metadata</span>
+                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          <div id={`metadata-${index}`} className="hidden mt-2">
+                            <div className="bg-gray-50 p-3 rounded text-sm">
+                              {Object.entries(result.metadata).map(([key, value]) => (
+                                <div key={key} className="mb-1">
+                                  <span className="font-medium text-gray-700">{key}:</span>{' '}
+                                  <span className="text-gray-600">{String(value)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>

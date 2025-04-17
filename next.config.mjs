@@ -5,6 +5,19 @@ const nextConfig = {
         serverActions: {
           bodySizeLimit: '30mb',
         },
+        // Enable Turbopack
+        turbo: {
+          rules: {
+            // Add any specific rules needed for your file types
+            '*.pdf': ['file'],
+            '*.doc': ['file'],
+            '*.docx': ['file'],
+            '*.xls': ['file'],
+            '*.xlsx': ['file'],
+            '*.ppt': ['file'],
+            '*.pptx': ['file'],
+          }
+        }
       },
     webpack: (config) => {
         config.resolve.fallback = {
