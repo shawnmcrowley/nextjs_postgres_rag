@@ -377,12 +377,19 @@ export default function Home() {
                           </button>
                           <div id={`metadata-${index}`} className="hidden mt-2">
                             <div className="bg-gray-50 p-3 rounded text-sm">
-                              {Object.entries(result.metadata).map(([key, value]) => (
-                                <div key={key} className="mb-1">
-                                  <span className="font-medium text-gray-700">{key}:</span>{' '}
-                                  <span className="text-gray-600">{String(value)}</span>
-                                </div>
-                              ))}
+                              {Object.entries(result.metadata).map(([key, value]) => {
+                                // Convert size to MB if the key is 'size'
+                                const displayValue = key.toLowerCase() === 'size' && typeof value === 'number'
+                                  ? `${(value / (1024 * 1024)).toFixed(2)} MB`
+                                  : String(value);
+                                
+                                return (
+                                  <div key={key} className="mb-1">
+                                    <span className="font-medium text-gray-700">{key}:</span>{' '}
+                                    <span className="text-gray-600">{displayValue}</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
