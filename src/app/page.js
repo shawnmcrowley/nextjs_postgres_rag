@@ -4,6 +4,32 @@ import { useState } from "react";
 import Head from "next/head";
 import axios from "axios";
 
+function renderContentWithLinks(text) {
+  // URL regex pattern
+  const urlPattern = /(https?:\/\/[^\s]+)/g;
+  
+  // Split text by URLs and map to components
+  const parts = text.split(urlPattern);
+  
+  return parts.map((part, i) => {
+    // Check if this part is a URL
+    if (urlPattern.test(part)) {
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:text-blue-700 underline"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 export default function Home() {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -126,22 +152,22 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto px-4 max-w-none">
       <Head>
-        <title>RAG Document System</title>
+        <title>Retrieval-Augmented Generation Application</title>
         <meta
           name="description"
-          content="Retrieval-Augmented Generation for document processing"
+          content="Retrieval-Augmented Generation for Document Processing"
         />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="flex flex-col gap-8">
+      <main className="flex flex-col gap-8 w-full">
         <h1 className="text-3xl font-bold">
-          Document Retrieval-Augmented Generation
+          Retrieval-Augmented Generation System
         </h1>
 
-        <div className="bg-gray-100 p-6 rounded-md">
+        <div className="bg-gray-100 p-6 rounded-md w-full">
           <h2 className="text-xl font-semibold mb-4">Upload Document</h2>
           <form onSubmit={handleUpload} className="flex flex-col gap-4">
             <div>
@@ -251,7 +277,7 @@ export default function Home() {
           )}
         </div>
 
-        <div className="bg-gray-100 p-6 rounded-md">
+        <div className="bg-gray-100 p-6 rounded-md w-full">
           <h2 className="text-xl font-semibold mb-4">Query Documents</h2>
           <form onSubmit={handleSearch} className="flex flex-col gap-4">
             <div>
@@ -280,9 +306,9 @@ export default function Home() {
           )}
 
           {searchResults.length > 0 && (
-            <div className="mt-8">
+            <div className="mt-8 w-full">
               <h2 className="text-2xl font-bold mb-4">Search Results</h2>
-              <div className="space-y-6">
+              <div className="space-y-6 w-full">
                 {searchResults.map((result, index) => {
                   console.log('Rendering result:', {
                     index,
@@ -301,34 +327,32 @@ export default function Home() {
                   const similarityPercentage = ((1 - result.similarity) * 100).toFixed(1);
 
                   return (
-                    <div key={index} className="bg-white p-6 rounded-lg shadow-md border border-gray-200 hover:border-blue-200 transition-colors">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-semibold text-lg text-gray-800">{result.filename}</h3>
-                          <div className="flex items-center mt-1">
-                            <span className="text-sm text-gray-600">Relevance: </span>
-                            <div className="ml-2 flex items-center">
-                              <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-blue-500 rounded-full"
-                                  style={{ width: `${similarityPercentage}%` }}
-                                ></div>
-                              </div>
-                              <span className="ml-2 text-sm font-medium text-gray-700">
-                                {similarityPercentage}%
-                              </span>
+                    <div key={index} className="bg-white p-2 rounded-lg shadow-md border border-gray-200 hover:border-blue-200 transition-colors w-full">
+                      <div className="mb-2 w-full">
+                        <h3 className="font-semibold text-lg text-gray-800">{result.filename}</h3>
+                        <div className="flex items-center mt-1">
+                          <span className="text-sm text-gray-600">Relevance: </span>
+                          <div className="ml-2 flex items-center">
+                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-blue-500 rounded-full"
+                                style={{ width: `${similarityPercentage}%` }}
+                              ></div>
                             </div>
+                            <span className="ml-2 text-sm font-medium text-gray-700">
+                              {similarityPercentage}%
+                            </span>
                           </div>
                         </div>
                       </div>
                       
-                      <div className="prose max-w-none">
+                      <div className="w-full">
                         {formattedContent.slice(0, 3).map((paragraph, i) => (
-                          <div key={i} className="mb-4">
+                          <div key={i} className="mb-2 w-full">
                             {paragraph.split('\n').map((line, j) => (
-                              <p key={j} className="text-gray-700 leading-relaxed mb-2">
-                                {line}
-                              </p>
+                              <div key={j} className="text-gray-700 leading-relaxed mb-1 w-full">
+                                {renderContentWithLinks(line)}
+                              </div>
                             ))}
                           </div>
                         ))}
@@ -336,7 +360,6 @@ export default function Home() {
                           <button 
                             className="text-blue-500 hover:text-blue-700 text-sm font-medium mt-2"
                             onClick={() => {
-                              // Toggle full content view
                               const element = document.getElementById(`content-${index}`);
                               if (element) {
                                 element.classList.toggle('hidden');
@@ -346,13 +369,13 @@ export default function Home() {
                             Show more
                           </button>
                         )}
-                        <div id={`content-${index}`} className="hidden">
+                        <div id={`content-${index}`} className="hidden w-full">
                           {formattedContent.slice(3).map((paragraph, i) => (
-                            <div key={i} className="mb-4">
+                            <div key={i} className="mb-4 w-full">
                               {paragraph.split('\n').map((line, j) => (
-                                <p key={j} className="text-gray-700 leading-relaxed mb-2">
-                                  {line}
-                                </p>
+                                <div key={j} className="text-gray-700 leading-relaxed mb-2 w-full">
+                                  {renderContentWithLinks(line)}
+                                </div>
                               ))}
                             </div>
                           ))}
@@ -394,6 +417,18 @@ export default function Home() {
                           </div>
                         </div>
                       )}
+
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <button
+                          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                          className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
+                        >
+                          <span>Back to top</span>
+                          <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
