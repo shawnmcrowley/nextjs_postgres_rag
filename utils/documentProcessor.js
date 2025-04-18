@@ -58,35 +58,49 @@ function splitIntoChunks(text, maxLength = 8000) {
   const chunks = [];
   let start = 0;
   
-  while (start < text.length) {
-    let end = start + maxLength;
-    
-    // If we're not at the end, try to find a good breaking point
-    if (end < text.length) {
-      // Try to break at paragraph
-      const paragraphEnd = text.slice(start, end).lastIndexOf('\n\n');
-      if (paragraphEnd > 0) {
-        end = start + paragraphEnd + 2;
-      } else {
-        // Try to break at sentence
-        const sentenceEnd = text.slice(start, end).lastIndexOf('. ');
-        if (sentenceEnd > 0) {
-          end = start + sentenceEnd + 2;
-        } else {
-          // Try to break at word
-          const wordEnd = text.slice(start, end).lastIndexOf(' ');
-          if (wordEnd > 0) {
-            end = start + wordEnd + 1;
-          }
-        }
+  // First, split the text into paragraphs
+  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+  let currentChunk = '';
+  
+  for (const paragraph of paragraphs) {
+    // If adding this paragraph would exceed the max length
+    if (currentChunk.length + paragraph.length + 2 > maxLength) {
+      // If we have content in the current chunk, save it
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+        currentChunk = '';
       }
+      
+      // If the paragraph itself is too long, split it at sentences
+      if (paragraph.length > maxLength) {
+        const sentences = paragraph.split(/(?<=[.!?])\s+/);
+        let sentenceChunk = '';
+        
+        for (const sentence of sentences) {
+          if (sentenceChunk.length + sentence.length + 1 > maxLength) {
+            if (sentenceChunk) {
+              chunks.push(sentenceChunk.trim());
+              sentenceChunk = '';
+            }
+          }
+          sentenceChunk += (sentenceChunk ? ' ' : '') + sentence;
+        }
+        
+        if (sentenceChunk) {
+          chunks.push(sentenceChunk.trim());
+        }
+      } else {
+        chunks.push(paragraph.trim());
+      }
+    } else {
+      // Add the paragraph to the current chunk
+      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
     }
-    
-    const chunk = text.slice(start, end).trim();
-    if (chunk) {
-      chunks.push(chunk);
-    }
-    start = end;
+  }
+  
+  // Add any remaining content
+  if (currentChunk) {
+    chunks.push(currentChunk.trim());
   }
   
   return chunks;

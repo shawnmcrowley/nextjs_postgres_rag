@@ -4,31 +4,213 @@ import { useState } from "react";
 import Head from "next/head";
 import axios from "axios";
 
-function renderContentWithLinks(text) {
-  // URL regex pattern
-  const urlPattern = /(https?:\/\/[^\s]+)/g;
+const renderContentWithLinks = (text, showAll, setShowAll) => {
+  // First split by code blocks to preserve them
+  const codeBlockRegex = /```([\s\S]*?)```/g;
+  const parts = text.split(codeBlockRegex);
   
-  // Split text by URLs and map to components
-  const parts = text.split(urlPattern);
-  
-  return parts.map((part, i) => {
-    // Check if this part is a URL
-    if (urlPattern.test(part)) {
+  return parts.map((part, index) => {
+    // If this is a code block, render it as is
+    if (index % 2 === 1) {
       return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 hover:text-blue-700 underline"
-        >
-          {part}
-        </a>
+        <div key={`code-${index}`} className="relative group">
+          <pre 
+            className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto font-mono text-sm
+                      border border-gray-200 dark:border-gray-700
+                      shadow-sm hover:shadow-md transition-shadow duration-200"
+          >
+            {part}
+          </pre>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(part);
+              const button = document.getElementById(`copy-button-${index}`);
+              if (button) {
+                button.innerHTML = `
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                `;
+                setTimeout(() => {
+                  button.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                    </svg>
+                  `;
+                }, 2000);
+              }
+            }}
+            id={`copy-button-${index}`}
+            className="absolute top-2 right-2 p-2 rounded-md bg-gray-200 dark:bg-gray-700
+                      opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                      hover:bg-gray-300 dark:hover:bg-gray-600"
+            title="Copy code"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+          </button>
+        </div>
+      );
+    }
+
+    // For non-code parts, split by URLs and paragraphs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const paragraphs = part.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    
+    // Show only first 3 paragraphs initially
+    const visibleParagraphs = showAll ? paragraphs : paragraphs.slice(0, 3);
+    
+    return (
+      <div key={`text-${index}`} className="space-y-2 w-full max-w-none">
+        {visibleParagraphs.map((paragraph, pIndex) => {
+          // Split paragraph into lines and limit to 5 lines
+          const lines = paragraph.split('\n').filter(line => line.trim().length > 0);
+          const visibleLines = lines.slice(0, 5);
+          const hasMoreLines = lines.length > 5;
+          
+          return (
+            <div key={`para-${index}-${pIndex}`} className="space-y-1 w-full max-w-none">
+              {visibleLines.map((line, lineIndex) => {
+                const textParts = line.split(urlRegex);
+                return (
+                  <div key={`line-${index}-${pIndex}-${lineIndex}`} className="w-full max-w-none">
+                    {textParts.map((textPart, textIndex) => {
+                      if (textPart.match(urlRegex)) {
+                        const isGithub = textPart.includes('github.com');
+                        const isDocumentation = textPart.includes('docs') || textPart.includes('readme');
+                        const isExternal = !textPart.includes(window.location.hostname);
+                        
+                        return (
+                          <a 
+                            key={`link-${index}-${pIndex}-${lineIndex}-${textIndex}`}
+                            href={textPart} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className={`
+                              ${isGithub ? 'text-purple-600 hover:text-purple-800' : 
+                                isDocumentation ? 'text-green-600 hover:text-green-800' : 
+                                isExternal ? 'text-blue-600 hover:text-blue-800' : 
+                                'text-indigo-600 hover:text-indigo-800'}
+                              hover:underline transition-colors duration-200
+                              font-medium
+                            `}
+                          >
+                            {textPart}
+                          </a>
+                        );
+                      }
+                      return <span key={`text-${index}-${pIndex}-${lineIndex}-${textIndex}`} className="w-full max-w-none">{textPart}</span>;
+                    })}
+                  </div>
+                );
+              })}
+              {hasMoreLines && (
+                <button
+                  onClick={() => {
+                    const element = document.getElementById(`more-lines-${index}-${pIndex}`);
+                    if (element) {
+                      element.classList.toggle('hidden');
+                      const button = document.getElementById(`more-lines-button-${index}-${pIndex}`);
+                      if (button) {
+                        button.textContent = element.classList.contains('hidden') 
+                          ? `Show ${lines.length - 5} more lines` 
+                          : 'Show fewer lines';
+                      }
+                    }
+                  }}
+                  id={`more-lines-button-${index}-${pIndex}`}
+                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Show {lines.length - 5} more lines
+                </button>
+              )}
+              {hasMoreLines && (
+                <div id={`more-lines-${index}-${pIndex}`} className="hidden w-full max-w-none">
+                  {lines.slice(5).map((line, lineIndex) => {
+                    const textParts = line.split(urlRegex);
+                    return (
+                      <div key={`more-line-${index}-${pIndex}-${lineIndex}`} className="w-full max-w-none">
+                        {textParts.map((textPart, textIndex) => {
+                          if (textPart.match(urlRegex)) {
+                            const isGithub = textPart.includes('github.com');
+                            const isDocumentation = textPart.includes('docs') || textPart.includes('readme');
+                            const isExternal = !textPart.includes(window.location.hostname);
+                            
+                            return (
+                              <a 
+                                key={`more-link-${index}-${pIndex}-${lineIndex}-${textIndex}`}
+                                href={textPart} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className={`
+                                  ${isGithub ? 'text-purple-600 hover:text-purple-800' : 
+                                    isDocumentation ? 'text-green-600 hover:text-green-800' : 
+                                    isExternal ? 'text-blue-600 hover:text-blue-800' : 
+                                    'text-indigo-600 hover:text-indigo-800'}
+                                  hover:underline transition-colors duration-200
+                                  font-medium
+                                `}
+                              >
+                                {textPart}
+                              </a>
+                            );
+                          }
+                          return <span key={`more-text-${index}-${pIndex}-${lineIndex}-${textIndex}`} className="w-full max-w-none">{textPart}</span>;
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {paragraphs.length > 3 && !showAll && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+          >
+            Show {paragraphs.length - 3} more paragraphs
+          </button>
+        )}
+      </div>
+    );
+  });
+};
+
+const renderContentWithCode = (text) => {
+  const codeBlockRegex = /```([\s\S]*?)```/g;
+  return text.split(codeBlockRegex).map((part, index) => {
+    if (part.match(codeBlockRegex)) {
+      return (
+        <div key={index} className="relative group">
+          <pre 
+            className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto font-mono text-sm
+                      border border-gray-200 dark:border-gray-700
+                      shadow-sm hover:shadow-md transition-shadow duration-200"
+          >
+            {part}
+          </pre>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(part);
+            }}
+            className="absolute top-2 right-2 p-2 rounded-md bg-gray-200 dark:bg-gray-700
+                      opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                      hover:bg-gray-300 dark:hover:bg-gray-600"
+            title="Copy code"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+          </button>
+        </div>
       );
     }
     return part;
   });
-}
+};
 
 export default function Home() {
   const [files, setFiles] = useState([]);
@@ -42,6 +224,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB in bytes
 
   const handleFileChange = (e) => {
@@ -152,7 +335,7 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto px-4 max-w-none">
+    <div className="container mx-auto px-12 max-w-none">
       <Head>
         <title>Retrieval-Augmented Generation Application</title>
         <meta
@@ -167,7 +350,7 @@ export default function Home() {
           Retrieval-Augmented Generation System
         </h1>
 
-        <div className="bg-gray-100 p-6 rounded-md w-full">
+        <div className="bg-gray-100 p-8 rounded-md w-full">
           <h2 className="text-xl font-semibold mb-4">Upload Document</h2>
           <form onSubmit={handleUpload} className="flex flex-col gap-4">
             <div>
@@ -277,7 +460,7 @@ export default function Home() {
           )}
         </div>
 
-        <div className="bg-gray-100 p-6 rounded-md w-full">
+        <div className="bg-gray-100 p-8 rounded-md w-full">
           <h2 className="text-xl font-semibold mb-4">Query Documents</h2>
           <form onSubmit={handleSearch} className="flex flex-col gap-4">
             <div>
@@ -307,8 +490,8 @@ export default function Home() {
 
           {searchResults.length > 0 && (
             <div className="mt-8 w-full">
-              <h2 className="text-2xl font-bold mb-4">Search Results</h2>
-              <div className="space-y-6 w-full">
+              <h2 className="text-2xl font-bold mb-6">Search Results</h2>
+              <div className="space-y-8 w-full">
                 {searchResults.map((result, index) => {
                   console.log('Rendering result:', {
                     index,
@@ -317,117 +500,79 @@ export default function Home() {
                     contentValue: result.content
                   });
 
-                  // Format the content for display
-                  const formattedContent = String(result.content || '')
-                    .split('\n\n') // Split by double newlines for paragraphs
-                    .map(paragraph => paragraph.trim())
-                    .filter(paragraph => paragraph.length > 0);
-
-                  // Calculate similarity percentage
-                  const similarityPercentage = ((1 - result.similarity) * 100).toFixed(1);
-
                   return (
-                    <div key={index} className="bg-white p-2 rounded-lg shadow-md border border-gray-200 hover:border-blue-200 transition-colors w-full">
-                      <div className="mb-2 w-full">
-                        <h3 className="font-semibold text-lg text-gray-800">{result.filename}</h3>
-                        <div className="flex items-center mt-1">
-                          <span className="text-sm text-gray-600">Relevance: </span>
-                          <div className="ml-2 flex items-center">
-                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-blue-500 rounded-full"
-                                style={{ width: `${similarityPercentage}%` }}
-                              ></div>
-                            </div>
-                            <span className="ml-2 text-sm font-medium text-gray-700">
-                              {similarityPercentage}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="w-full">
-                        {formattedContent.slice(0, 3).map((paragraph, i) => (
-                          <div key={i} className="mb-2 w-full">
-                            {paragraph.split('\n').map((line, j) => (
-                              <div key={j} className="text-gray-700 leading-relaxed mb-1 w-full">
-                                {renderContentWithLinks(line)}
+                    <div key={index} className="w-full">
+                      <div className="bg-white rounded-lg shadow-md border border-gray-200 hover:border-blue-200 transition-colors">
+                        <div className="px-12 py-4 border-b border-gray-200">
+                          <h3 className="font-semibold text-lg text-gray-800">{result.filename}</h3>
+                          <div className="flex items-center mt-3">
+                            <span className="text-sm text-gray-600">Relevance: </span>
+                            <div className="ml-2 flex items-center">
+                              <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-blue-500 rounded-full"
+                                  style={{ width: `${((1 - result.similarity) * 100).toFixed(1)}%` }}
+                                ></div>
                               </div>
-                            ))}
+                              <span className="ml-2 text-sm font-medium text-gray-700">
+                                {((1 - result.similarity) * 100).toFixed(1)}%
+                              </span>
+                            </div>
                           </div>
-                        ))}
-                        {formattedContent.length > 3 && (
-                          <button 
-                            className="text-blue-500 hover:text-blue-700 text-sm font-medium mt-2"
-                            onClick={() => {
-                              const element = document.getElementById(`content-${index}`);
-                              if (element) {
-                                element.classList.toggle('hidden');
-                              }
-                            }}
-                          >
-                            Show more
-                          </button>
-                        )}
-                        <div id={`content-${index}`} className="hidden w-full">
-                          {formattedContent.slice(3).map((paragraph, i) => (
-                            <div key={i} className="mb-4 w-full">
-                              {paragraph.split('\n').map((line, j) => (
-                                <div key={j} className="text-gray-700 leading-relaxed mb-2 w-full">
-                                  {renderContentWithLinks(line)}
+                        </div>
+                        
+                        <div className="w-full">
+                          <div className="pt-12 pb-12 pl-16 pr-0 space-y-6">
+                            {renderContentWithLinks(result.content, showAll, setShowAll)}
+                          </div>
+                          
+                          {result.metadata && Object.keys(result.metadata).length > 0 && (
+                            <div className="pt-4 pb-4 pl-16 pr-0 border-b border-gray-100">
+                              <button 
+                                className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
+                                onClick={() => {
+                                  const element = document.getElementById(`metadata-${index}`);
+                                  if (element) {
+                                    element.classList.toggle('hidden');
+                                  }
+                                }}
+                              >
+                                <span>Show Metadata</span>
+                                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              <div id={`metadata-${index}`} className="hidden mt-3">
+                                <div className="bg-gray-50 p-4 rounded text-sm">
+                                  {Object.entries(result.metadata).map(([key, value]) => {
+                                    const displayValue = key.toLowerCase() === 'size' && typeof value === 'number'
+                                      ? `${(value / (1024 * 1024)).toFixed(2)} MB`
+                                      : String(value);
+                                    
+                                    return (
+                                      <div key={key} className="mb-2">
+                                        <span className="font-medium text-gray-700">{key}:</span>{' '}
+                                        <span className="text-gray-600">{displayValue}</span>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              ))}
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                          )}
 
-                      {result.metadata && Object.keys(result.metadata).length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <button 
-                            className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
-                            onClick={() => {
-                              const element = document.getElementById(`metadata-${index}`);
-                              if (element) {
-                                element.classList.toggle('hidden');
-                              }
-                            }}
-                          >
-                            <span>Show metadata</span>
-                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                          <div id={`metadata-${index}`} className="hidden mt-2">
-                            <div className="bg-gray-50 p-3 rounded text-sm">
-                              {Object.entries(result.metadata).map(([key, value]) => {
-                                // Convert size to MB if the key is 'size'
-                                const displayValue = key.toLowerCase() === 'size' && typeof value === 'number'
-                                  ? `${(value / (1024 * 1024)).toFixed(2)} MB`
-                                  : String(value);
-                                
-                                return (
-                                  <div key={key} className="mb-1">
-                                    <span className="font-medium text-gray-700">{key}:</span>{' '}
-                                    <span className="text-gray-600">{displayValue}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                          <div className="px-12 py-4">
+                            <button
+                              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                              className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
+                            >
+                              <span>Back To Top</span>
+                              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
-                      )}
-
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <button
-                          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                          className="text-sm text-gray-600 hover:text-gray-800 flex items-center"
-                        >
-                          <span>Back to top</span>
-                          <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                          </svg>
-                        </button>
                       </div>
                     </div>
                   );
