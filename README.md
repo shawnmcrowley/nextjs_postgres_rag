@@ -113,8 +113,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
       depends_on:
         - postgres
 
-  volumes:
-    postgres_data:
+    volumes:
+      postgres_data:
 
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
