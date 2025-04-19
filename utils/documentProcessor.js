@@ -55,67 +55,154 @@ export async function processPptFile(buffer) {
 
 // Simple function to split text into chunks that respect the model's context length
 function splitIntoChunks(text, maxLength = 8000) {
+  // First, clean and normalize the text
+  text = text
+    .replace(/\r\n/g, '\n')           // Normalize line endings
+    .replace(/\n{3,}/g, '\n\n')       // Normalize multiple newlines
+    .replace(/\t/g, '    ')           // Convert tabs to spaces
+    .trim();
+
+  // Split into sections based on headings and major breaks
+  const sections = text.split(/(?=#{1,6}\s|^[A-Z][^a-z\n]{2,}$|\n{2,}[A-Z][^a-z\n]{2,}\n{2,})/);
   const chunks = [];
-  let start = 0;
-  
-  // First, split the text into paragraphs
-  const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
   let currentChunk = '';
-  
-  for (const paragraph of paragraphs) {
-    // If adding this paragraph would exceed the max length
-    if (currentChunk.length + paragraph.length + 2 > maxLength) {
-      // If we have content in the current chunk, save it
-      if (currentChunk) {
-        chunks.push(currentChunk.trim());
-        currentChunk = '';
+
+  for (const section of sections) {
+    // Split section into paragraphs
+    const paragraphs = section.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    
+    for (const paragraph of paragraphs) {
+      // If paragraph is a heading or very short, always keep it with the next paragraph
+      if (paragraph.match(/^#{1,6}\s|^[A-Z][^a-z\n]{2,}$/) || paragraph.length < 100) {
+        if (currentChunk.length + paragraph.length + 2 > maxLength) {
+          if (currentChunk) {
+            chunks.push(currentChunk.trim());
+            currentChunk = '';
+          }
+        }
+        currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+        continue;
+      }
+
+      // For longer paragraphs, split by sentences
+      const sentences = paragraph.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
+      let sentenceGroup = '';
+      
+      for (const sentence of sentences) {
+        // If adding this sentence would exceed maxLength
+        if (currentChunk.length + sentenceGroup.length + sentence.length + 1 > maxLength) {
+          if (currentChunk) {
+            chunks.push(currentChunk.trim());
+            currentChunk = '';
+          }
+          // If a single sentence is too long, split it by clauses
+          if (sentence.length > maxLength) {
+            const clauses = sentence.split(/(?<=[,;:])\s+/);
+            let clauseGroup = '';
+            for (const clause of clauses) {
+              if (currentChunk.length + clauseGroup.length + clause.length + 1 > maxLength) {
+                if (currentChunk) {
+                  chunks.push(currentChunk.trim());
+                  currentChunk = '';
+                }
+                clauseGroup = clause;
+              } else {
+                clauseGroup += (clauseGroup ? ' ' : '') + clause;
+              }
+            }
+            if (clauseGroup) {
+              currentChunk = clauseGroup;
+            }
+          } else {
+            currentChunk = sentence;
+          }
+        } else {
+          sentenceGroup += (sentenceGroup ? ' ' : '') + sentence;
+          if (sentenceGroup.length > maxLength / 2) {
+            currentChunk += (currentChunk ? '\n\n' : '') + sentenceGroup;
+            sentenceGroup = '';
+          }
+        }
       }
       
-      // If the paragraph itself is too long, split it at sentences
-      if (paragraph.length > maxLength) {
-        const sentences = paragraph.split(/(?<=[.!?])\s+/);
-        let sentenceChunk = '';
-        
-        for (const sentence of sentences) {
-          if (sentenceChunk.length + sentence.length + 1 > maxLength) {
-            if (sentenceChunk) {
-              chunks.push(sentenceChunk.trim());
-              sentenceChunk = '';
-            }
-          }
-          sentenceChunk += (sentenceChunk ? ' ' : '') + sentence;
-        }
-        
-        if (sentenceChunk) {
-          chunks.push(sentenceChunk.trim());
-        }
-      } else {
-        chunks.push(paragraph.trim());
+      // Add any remaining sentences
+      if (sentenceGroup) {
+        currentChunk += (currentChunk ? '\n\n' : '') + sentenceGroup;
       }
-    } else {
-      // Add the paragraph to the current chunk
-      currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
     }
   }
-  
-  // Add any remaining content
+
+  // Add the last chunk if it exists
   if (currentChunk) {
     chunks.push(currentChunk.trim());
   }
-  
-  return chunks;
+
+  // Post-process chunks to ensure quality
+  return chunks.map(chunk => {
+    // Remove any trailing incomplete sentences
+    chunk = chunk.replace(/[^.!?]+$/, '');
+    // Ensure proper spacing
+    chunk = chunk.replace(/\s+/g, ' ').trim();
+    return chunk;
+  }).filter(chunk => chunk.length > 0);
 }
 
 // Generate embeddings using OpenAI
 export async function generateEmbedding(text) {
   try {
     console.log('Generating embedding...');
-    const response = await openai.embeddings.create({
-      model: "text-embedding-3-small",
-      input: text,
-    });
-    console.log('Embedding generated');
-    return response.data[0].embedding;
+    
+    // First, clean and normalize the text
+    text = text
+      .replace(/\r\n/g, '\n')           // Normalize line endings
+      .replace(/\n{3,}/g, '\n\n')       // Normalize multiple newlines
+      .replace(/\t/g, '    ')           // Convert tabs to spaces
+      .trim();
+
+    // Split into paragraphs while preserving structure
+    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    
+    // Generate embeddings for each paragraph
+    const embeddings = await Promise.all(
+      paragraphs.map(async (paragraph) => {
+        try {
+          const response = await openai.embeddings.create({
+            model: "text-embedding-3-small",
+            input: paragraph.trim(),
+            encoding_format: "float"
+          });
+          return {
+            content: paragraph,
+            embedding: response.data[0].embedding
+          };
+        } catch (error) {
+          console.error('Error generating embedding for paragraph:', error);
+          return null;
+        }
+      })
+    );
+
+    // Filter out any failed embeddings and combine results
+    const validEmbeddings = embeddings.filter(embedding => embedding !== null);
+    
+    if (validEmbeddings.length === 0) {
+      throw new Error('No valid embeddings generated');
+    }
+
+    // If we have multiple paragraphs, combine their embeddings
+    if (validEmbeddings.length > 1) {
+      const combinedEmbedding = validEmbeddings[0].embedding.map((_, index) => {
+        return validEmbeddings.reduce((sum, emb) => sum + emb.embedding[index], 0) / validEmbeddings.length;
+      });
+      
+      return {
+        content: text,
+        embedding: combinedEmbedding
+      };
+    }
+
+    // Return single paragraph result
+    return validEmbeddings[0];
   } catch (error) {
     console.error('Error generating embedding:', error);
     throw new Error(`Failed to generate embedding: ${error.message}`);

@@ -1,5 +1,6 @@
-"use client";
 // pages/index.js
+
+"use client";
 import { useState } from "react";
 import Head from "next/head";
 import axios from "axios";
@@ -64,10 +65,10 @@ const renderContentWithLinks = (text, showAll, setShowAll) => {
     return (
       <div key={`text-${index}`} className="space-y-2 w-full max-w-none">
         {visibleParagraphs.map((paragraph, pIndex) => {
-          // Split paragraph into lines and limit to 5 lines
+          // Split paragraph into lines and limit to 15 lines
           const lines = paragraph.split('\n').filter(line => line.trim().length > 0);
-          const visibleLines = lines.slice(0, 5);
-          const hasMoreLines = lines.length > 5;
+          const visibleLines = lines.slice(0, 15);
+          const hasMoreLines = lines.length > 15;
           
           return (
             <div key={`para-${index}-${pIndex}`} className="space-y-1 w-full max-w-none">
@@ -114,7 +115,7 @@ const renderContentWithLinks = (text, showAll, setShowAll) => {
                       const button = document.getElementById(`more-lines-button-${index}-${pIndex}`);
                       if (button) {
                         button.textContent = element.classList.contains('hidden') 
-                          ? `Show ${lines.length - 5} more lines` 
+                          ? `Show ${lines.length - 15} more lines` 
                           : 'Show fewer lines';
                       }
                     }
@@ -122,12 +123,12 @@ const renderContentWithLinks = (text, showAll, setShowAll) => {
                   id={`more-lines-button-${index}-${pIndex}`}
                   className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
                 >
-                  Show {lines.length - 5} more lines
+                  Show {lines.length - 15} more lines
                 </button>
               )}
               {hasMoreLines && (
                 <div id={`more-lines-${index}-${pIndex}`} className="hidden w-full max-w-none">
-                  {lines.slice(5).map((line, lineIndex) => {
+                  {lines.slice(15).map((line, lineIndex) => {
                     const textParts = line.split(urlRegex);
                     return (
                       <div key={`more-line-${index}-${pIndex}-${lineIndex}`} className="w-full max-w-none">
@@ -461,10 +462,10 @@ export default function Home() {
         </div>
 
         <div className="bg-gray-100 p-8 rounded-md w-full">
-          <h2 className="text-xl font-semibold mb-4">Query Documents</h2>
+          <h2 className="text-xl font-semibold mb-4">Search Documents</h2>
           <form onSubmit={handleSearch} className="flex flex-col gap-4">
             <div>
-              <label className="block mb-2">Enter your query</label>
+              <label className="block mb-2">What Can I Help You Find?</label>
               <input
                 type="text"
                 value={query}
@@ -490,16 +491,9 @@ export default function Home() {
 
           {searchResults.length > 0 && (
             <div className="mt-8 w-full">
-              <h2 className="text-2xl font-bold mb-6">Search Results</h2>
+              <h3 className="text-2xl font-bold mb-6">Search Results</h3>
               <div className="space-y-8 w-full">
                 {searchResults.map((result, index) => {
-                  console.log('Rendering result:', {
-                    index,
-                    filename: result.filename,
-                    content: typeof result.content,
-                    contentValue: result.content
-                  });
-
                   return (
                     <div key={index} className="w-full">
                       <div className="bg-white rounded-lg shadow-md border border-gray-200 hover:border-blue-200 transition-colors">
