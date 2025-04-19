@@ -82,25 +82,25 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ### Create docker-compose.yml
 
 
-  services:
-    postgres:
-      # Using pgvector's official PostgreSQL image with pgvector pre-installed
-      image: pgvector/pgvector:pg15
-      container_name: postgres
-      environment:
-        POSTGRES_USER: postgres
-        POSTGRES_PASSWORD: postgres
-        POSTGRES_DB: rag_db
-      volumes:
-        - postgres_data:/var/lib/postgresql/data
-        - ./postgres/init:/docker-entrypoint-initdb.d
-      ports:
-        - "5432:5432"
-      healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres"]
-        interval: 5s
-        timeout: 5s
-        retries: 5
+    services:
+      postgres:
+        # Using pgvector's official PostgreSQL image with pgvector pre-installed
+        image: pgvector/pgvector:pg15
+        container_name: postgres
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rag_db
+        volumes:
+          - postgres_data:/var/lib/postgresql/data
+          - ./postgres/init:/docker-entrypoint-initdb.d
+        ports:
+          - "5432:5432"
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U postgres"]
+          interval: 5s
+          timeout: 5s
+          retries: 5
 
     pgadmin:
       image: dpage/pgadmin4
